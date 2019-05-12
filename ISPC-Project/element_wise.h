@@ -14,4 +14,14 @@ typedef struct {
 
 extern void VS_CC invertCreate(const VSMap *in, VSMap *out, void *userData, VSCore *core, const VSAPI *vsapi);
 
+typedef struct {
+    VSNodeRef *node;
+    const VSVideoInfo *vi;
+    bool process[3];
+    uint16_t maxi[3], mini[3];
+    float maxf[3], minf[3];
+} LimiterData;
+
+extern void VS_CC limiterCreate(const VSMap *in, VSMap *out, void *userData, VSCore *core, const VSAPI *vsapi);
+
 #endif // ISPC_ELEMENT_WISE_H
