@@ -461,3 +461,125 @@ void VS_CC binarizeCreate(const VSMap *in, VSMap *out, void *userData, VSCore *c
 
     vsapi->createFilter(in, out, "Binarize", binarizeInit, binarizeGetFrame, binarizeFree, fmParallel, 0, data, core);
 }
+
+// Merge
+static void VS_CC mergeInit(VSMap *in, VSMap *out, void **instanceData, VSNode *node, VSCore *core, const VSAPI *vsapi) {
+    MergeData *d = (MergeData *) * instanceData;
+    vsapi->setVideoInfo(d->vi, 1, node);
+}
+
+static const VSFrameRef *VS_CC mergeGetFrame(int n, int activationReason, void **instanceData, void **frameData, VSFrameContext *frameCtx, VSCore *core, const VSAPI *vsapi) {
+    MergeData *d = (MergeData *) * instanceData;
+
+    if (activationReason == arInitial) {
+        vsapi->requestFrameFilter(n, d->node1, frameCtx);
+        vsapi->requestFrameFilter(n, d->node2, frameCtx);
+    } else if (activationReason == arAllFramesReady) {
+        const VSFrameRef *src1 = vsapi->getFrameFilter(n, d->node1, frameCtx);
+        const VSFrameRef *src2 = vsapi->getFrameFilter(n, d->node2, frameCtx);
+
+        const int pl[] = { 0, 1, 2 };
+        const VSFrameRef *fs[] = { 0, src1, src2 }; // kMerge, kCopyFirst, kCopySecond
+        const VSFrameRef *fr[] = {fs[d->process[0]], fs[d->process[1]], fs[d->process[2]]};
+        VSFrameRef *dst = vsapi->newVideoFrame2(d->vi->format, d->vi->width, d->vi->height, fr, pl, src1, core);
+
+        for (int plane = 0; plane < d->vi->format->numPlanes; plane++) {
+            if (d->process[plane] == kMerge) {
+                int stride = vsapi->getStride(src1, plane) / d->vi->format->bytesPerSample;
+                int height = vsapi->getFrameHeight(src1, plane);
+                int width = vsapi->getFrameWidth(src1, plane);
+                const uint8_t * VS_RESTRICT srcp1 = vsapi->getReadPtr(src1, plane);
+                const uint8_t * VS_RESTRICT srcp2 = vsapi->getReadPtr(src2, plane);
+                uint8_t * VS_RESTRICT dstp = vsapi->getWritePtr(dst, plane);
+
+                if (d->vi->format->sampleType == stInteger) {
+                    if (d->vi->format->bytesPerSample == 1) {
+                        merge_i8(srcp1, srcp2, dstp, width, height, stride, d->weighti[plane]);
+
+                    } else if (d->vi->format->bytesPerSample == 2) {
+                        merge_i16((const uint16_t *)srcp1, (const uint16_t *)srcp2, (uint16_t *)dstp, width, height, stride, d->weighti[plane]);
+                    }
+                } else if (d->vi->format->sampleType == stFloat) {
+                    if (d->vi->format->bytesPerSample == 4) {
+                        merge_f32((const float *)srcp1, (const float *)srcp2, (float *)dstp, width, height, stride, d->weightf[plane]);
+                    }
+                }
+            }
+        }
+
+        vsapi->freeFrame(src1);
+        vsapi->freeFrame(src2);
+        return dst;
+    }
+
+    return 0;
+}
+
+static void VS_CC mergeFree(void *instanceData, VSCore *core, const VSAPI *vsapi) {
+    MergeData *d = (MergeData *)instanceData;
+    vsapi->freeNode(d->node1);
+    vsapi->freeNode(d->node2);
+    free(d);
+}
+
+void VS_CC mergeCreate(const VSMap *in, VSMap *out, void *userData, VSCore *core, const VSAPI *vsapi) {
+    MergeData d;
+    MergeData *data;
+
+    d.node1 = vsapi->propGetNode(in, "clipa", 0, 0);
+    d.node2 = vsapi->propGetNode(in, "clipb", 0, 0);
+    d.vi = vsapi->getVideoInfo(d.node1);
+
+    int num_planes = d.vi->format->numPlanes;
+
+    if (vsapi->propNumElements(in, "weight") > num_planes) {
+        vsapi->freeNode(d.node1);
+        vsapi->freeNode(d.node2);
+        vsapi->setError(out, "ispc.Merge: \"weight\" has more values specified than there are planes");
+        return;
+    }
+
+    bool prevValid = false;
+    for (int i = 0; i < 3; i++) {
+        int err;
+
+        float temp = (float)vsapi->propGetFloat(in, "weight", i, &err);
+        if (err) {
+            temp = prevValid ? d.weightf[i-1] : 0.5f;
+        } else {
+            if ((temp < 0.f) || (temp > 1.f)) {
+                vsapi->freeNode(d.node1);
+                vsapi->freeNode(d.node2);
+                vsapi->setError(out, "ispc.Merge: \"weight\" must be between 0 and 1");
+                return;
+            }
+            prevValid = true;
+        }
+
+        d.weightf[i] = temp;
+        d.weighti[i] = (uint32_t)(d.weightf[i] * (1 << 15) + 0.5f);
+
+        if (d.vi->format->sampleType == stInteger) {
+            if (d.weighti[i] == 0U) {
+                d.process[i] = kCopyFirst;
+            } else if (d.weighti[i] == (1 << 15)) {
+                d.process[i] = kCopySecond;
+            } else {
+                d.process[i] = kMerge;
+            }
+        } else if (d.vi->format->sampleType == stFloat) {
+            if (d.weightf[i] == 0.f) {
+                d.process[i] = kCopyFirst;
+            } else if (d.weightf[i] == 1.f) {
+                d.process[i] = kCopySecond;
+            } else {
+                d.process[i] = kMerge;
+            }
+        }
+    }
+
+    data = malloc(sizeof(d));
+    *data = d;
+
+    vsapi->createFilter(in, out, "Merge", mergeInit, mergeGetFrame, mergeFree, fmParallel, 0, data, core);
+}

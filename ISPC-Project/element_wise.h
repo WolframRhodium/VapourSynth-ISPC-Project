@@ -2,6 +2,7 @@
 #define ISPC_ELEMENT_WISE_H
 
 #include <stdbool.h>
+#include <stdint.h>
 
 #include "VapourSynth.h"
 #include "VSHelper.h"
@@ -33,5 +34,16 @@ typedef struct {
 } BinarizeData;
 
 extern void VS_CC binarizeCreate(const VSMap *in, VSMap *out, void *userData, VSCore *core, const VSAPI *vsapi);
+
+typedef struct {
+    VSNodeRef *node1;
+    VSNodeRef *node2;
+    const VSVideoInfo *vi;
+    enum MergeBehavior {kMerge=0, kCopyFirst=1, kCopySecond=2} process[3];
+    uint32_t weighti[3];
+    float weightf[3];
+} MergeData;
+
+extern void VS_CC mergeCreate(const VSMap *in, VSMap *out, void *userData, VSCore *core, const VSAPI *vsapi);
 
 #endif // ISPC_ELEMENT_WISE_H

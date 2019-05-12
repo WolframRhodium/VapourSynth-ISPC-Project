@@ -63,28 +63,53 @@ export void limiter_f32(const uniform float srcp[], uniform float dstp[],
 
 // Binarize
 export void binarize_i8(const uniform unsigned int8 srcp[], uniform unsigned int8 dstp[], 
-                       uniform int width, uniform int height, uniform int stride, 
-                       uniform unsigned int8 threshold, uniform unsigned int8 v0, 
-                       uniform unsigned int8 v1) {
+                        uniform int width, uniform int height, uniform int stride, 
+                        uniform unsigned int8 threshold, uniform unsigned int8 v0, 
+                        uniform unsigned int8 v1) {
     foreach (i = 0 ... height, j = 0 ... width) {
-        (dstp + i * stride)[j] = ((srcp + i * stride)[j] < threshold) ? v0 : v1;
+        (dstp + i * stride)[j] = (srcp + i * stride)[j] < threshold ? v0 : v1;
     }
 }
 
 export void binarize_i16(const uniform unsigned int16 srcp[], uniform unsigned int16 dstp[], 
-                        uniform int width, uniform int height, uniform int stride, 
-                        uniform unsigned int16 threshold, uniform unsigned int16 v0, 
-                        uniform unsigned int16 v1) {
+                         uniform int width, uniform int height, uniform int stride, 
+                         uniform unsigned int16 threshold, uniform unsigned int16 v0, 
+                         uniform unsigned int16 v1) {
     foreach (i = 0 ... height, j = 0 ... width) {
-        (dstp + i * stride)[j] = ((srcp + i * stride)[j] < threshold) ? v0 : v1;
+        (dstp + i * stride)[j] = (srcp + i * stride)[j] < threshold ? v0 : v1;
     }
 }
 
 export void binarize_f32(const uniform float srcp[], uniform float dstp[], 
-                        uniform int width, uniform int height, 
-                        uniform int stride, uniform float threshold, 
-                        uniform float v0, uniform float v1) {
+                         uniform int width, uniform int height, 
+                         uniform int stride, uniform float threshold, 
+                         uniform float v0, uniform float v1) {
     foreach (i = 0 ... height, j = 0 ... width) {
-        (dstp + i * stride)[j] = ((srcp + i * stride)[j] < threshold) ? v0 : v1;
+        (dstp + i * stride)[j] = (srcp + i * stride)[j] < threshold ? v0 : v1;
+    }
+}
+
+// Merge
+export void merge_i8(const uniform unsigned int8 srcp1[], const uniform unsigned int8 srcp2[], 
+                     uniform unsigned int8 dstp[], uniform int width, uniform int height, 
+                     uniform int stride, uniform unsigned int32 weight) {
+    foreach (i = 0 ... height, j = 0 ... width) {
+        (dstp + i * stride)[j] = (unsigned int8)((srcp1 + i * stride)[j] + ((((srcp2 + i * stride)[j] - (srcp1 + i * stride)[j]) * weight + (1U << 14U)) >> 15U));
+    }
+}
+
+export void merge_i16(const uniform unsigned int16 srcp1[], const uniform unsigned int16 srcp2[],
+                      uniform unsigned int16 dstp[], uniform int width, uniform int height, 
+                      uniform int stride, uniform int32 weight) {
+    foreach (i = 0 ... height, j = 0 ... width) {
+        (dstp + i * stride)[j] = (unsigned int16)((srcp1 + i * stride)[j] + ((((srcp2 + i * stride)[j] - (srcp1 + i * stride)[j]) * weight + (1U << 14U)) >> 15U));
+    }
+}
+
+export void merge_f32(const uniform float srcp1[], const uniform float srcp2[], 
+                         uniform float dstp[], uniform int width, uniform int height, 
+                         uniform int stride, uniform float weight) {
+    foreach (i = 0 ... height, j = 0 ... width) {
+        (dstp + i * stride)[j] = (srcp1 + i * stride)[j] + (((srcp2 + i * stride)[j] - (srcp1 + i * stride)[j]) * weight);
     }
 }
