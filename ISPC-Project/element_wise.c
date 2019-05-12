@@ -31,22 +31,22 @@ static const VSFrameRef *VS_CC invertGetFrame(int n, int activationReason, void 
 
                 if (d->vi->format->sampleType == stInteger) {
                     if (d->vi->format->bytesPerSample == 1) {
-                        Invert_i8(srcp, dstp, width, height, stride);
+                        invert_i8(srcp, dstp, width, height, stride);
 
                     } else if (d->vi->format->bytesPerSample == 2) {
                         if (d->vi->format->bitsPerSample == 16) {
-                            Invert_i16((const uint16_t *)srcp, (uint16_t *)dstp, width, height, stride);
+                            invert_i16((const uint16_t *)srcp, (uint16_t *)dstp, width, height, stride);
                         } else {
                             const uint16_t peak = (1 << d->vi->format->bitsPerSample) - 1;
 
-                            Invert_i16m((const uint16_t *)srcp, (uint16_t *)dstp, width, height, stride, peak);
+                            invert_i16m((const uint16_t *)srcp, (uint16_t *)dstp, width, height, stride, peak);
                         }
                     }
                 } else if (d->vi->format->sampleType == stFloat) {
                     if (d->vi->format->bytesPerSample == 4) {
                         const bool uv = (plane > 0) && ((d->vi->format->colorFamily == cmYUV) || (d->vi->format->colorFamily == cmYCoCg));
 
-                        Invert_f32((const float *)srcp, (float *)dstp, width, height, stride, uv);
+                        invert_f32((const float *)srcp, (float *)dstp, width, height, stride, uv);
                     }
                 }
             }
@@ -130,14 +130,14 @@ static const VSFrameRef *VS_CC limiterGetFrame(int n, int activationReason, void
 
                 if (d->vi->format->sampleType == stInteger) {
                     if (d->vi->format->bytesPerSample == 1) {
-                        Limiter_i8(srcp, dstp, width, height, stride, (uint8_t)d->mini[plane], (uint8_t)d->maxi[plane]);
+                        limiter_i8(srcp, dstp, width, height, stride, (uint8_t)d->mini[plane], (uint8_t)d->maxi[plane]);
 
                     } else if (d->vi->format->bytesPerSample == 2) {
-                        Limiter_i16((const uint16_t *)srcp, (uint16_t *)dstp, width, height, stride, d->mini[plane], d->maxi[plane]);
+                        limiter_i16((const uint16_t *)srcp, (uint16_t *)dstp, width, height, stride, d->mini[plane], d->maxi[plane]);
                     }
                 } else if (d->vi->format->sampleType == stFloat) {
                     if (d->vi->format->bytesPerSample == 4) {
-                        Limiter_f32((const float *)srcp, (float *)dstp, width, height, stride, d->minf[plane], d->maxf[plane]);
+                        limiter_f32((const float *)srcp, (float *)dstp, width, height, stride, d->minf[plane], d->maxf[plane]);
                     }
                 }
             }
@@ -178,7 +178,7 @@ void VS_CC limiterCreate(const VSMap *in, VSMap *out, void *userData, VSCore *co
         int err;
 
         if (d.vi->format->sampleType == stInteger) {
-            uint16_t temp = (uint16_t)vsapi->propGetFloat(in, "min", i, &err);
+            uint16_t temp = (uint16_t)(vsapi->propGetFloat(in, "min", i, &err) + .5);
             if (err) {
                 temp = (i == 0) ? 0U : d.mini[i-1];
             } else {
@@ -190,7 +190,7 @@ void VS_CC limiterCreate(const VSMap *in, VSMap *out, void *userData, VSCore *co
         } else if (d.vi->format->sampleType == stFloat) {
             float temp = (float)vsapi->propGetFloat(in, "min", i, &err);
             if (err) {
-                temp = prevValid ? d.minf[i-1] : (((i > 0) && (d.vi->format->colorFamily == cmYUV) || (d.vi->format->colorFamily == cmYCoCg)) ? -0.5f : 0.f);
+                temp = prevValid ? d.minf[i-1] : (((i > 0) && ((d.vi->format->colorFamily == cmYUV) || (d.vi->format->colorFamily == cmYCoCg))) ? -0.5f : 0.f);
             } else {
                 prevValid = true;
             }
@@ -210,7 +210,7 @@ void VS_CC limiterCreate(const VSMap *in, VSMap *out, void *userData, VSCore *co
         int err;
 
         if (d.vi->format->sampleType == stInteger) {
-            uint16_t temp = (uint16_t)vsapi->propGetFloat(in, "max", i, &err);
+            uint16_t temp = (uint16_t)(vsapi->propGetFloat(in, "max", i, &err) + .5);
             if (err) {
                 temp = (i == 0) ? ((1 << d.vi->format->bitsPerSample) - 1) : d.maxi[i-1];
             } else {
@@ -228,7 +228,7 @@ void VS_CC limiterCreate(const VSMap *in, VSMap *out, void *userData, VSCore *co
         } else if (d.vi->format->sampleType == stFloat) {
             float temp = (float)vsapi->propGetFloat(in, "max", i, &err);
             if (err) {
-                temp = prevValid ? d.maxf[i-1] : (((i > 0) && (d.vi->format->colorFamily == cmYUV) || (d.vi->format->colorFamily == cmYCoCg)) ? 0.5f : 1.f);
+                temp = prevValid ? d.maxf[i-1] : (((i > 0) && ((d.vi->format->colorFamily == cmYUV) || (d.vi->format->colorFamily == cmYCoCg))) ? 0.5f : 1.f);
             } else {
                 prevValid = true;
             }
@@ -270,4 +270,194 @@ void VS_CC limiterCreate(const VSMap *in, VSMap *out, void *userData, VSCore *co
     *data = d;
 
     vsapi->createFilter(in, out, "Limiter", limiterInit, limiterGetFrame, limiterFree, fmParallel, 0, data, core);
+}
+
+// Binarize
+static void VS_CC binarizeInit(VSMap *in, VSMap *out, void **instanceData, VSNode *node, VSCore *core, const VSAPI *vsapi) {
+    BinarizeData *d = (BinarizeData *) * instanceData;
+    vsapi->setVideoInfo(d->vi, 1, node);
+}
+
+static const VSFrameRef *VS_CC binarizeGetFrame(int n, int activationReason, void **instanceData, void **frameData, VSFrameContext *frameCtx, VSCore *core, const VSAPI *vsapi) {
+    BinarizeData *d = (BinarizeData *) * instanceData;
+
+    if (activationReason == arInitial) {
+        vsapi->requestFrameFilter(n, d->node, frameCtx);
+    } else if (activationReason == arAllFramesReady) {
+        const VSFrameRef *src = vsapi->getFrameFilter(n, d->node, frameCtx);
+
+        const int pl[] = { 0, 1, 2 };
+        const VSFrameRef *fr[] = {d->process[0] ? 0 : src, d->process[1] ? 0 : src, d->process[2] ? 0 : src};
+        VSFrameRef *dst = vsapi->newVideoFrame2(d->vi->format, d->vi->width, d->vi->height, fr, pl, src, core);
+
+        for (int plane = 0; plane < d->vi->format->numPlanes; plane++) {
+            if (d->process[plane]) {
+                int stride = vsapi->getStride(src, plane) / d->vi->format->bytesPerSample;
+                int height = vsapi->getFrameHeight(src, plane);
+                int width = vsapi->getFrameWidth(src, plane);
+                const uint8_t * VS_RESTRICT srcp = vsapi->getReadPtr(src, plane);
+                uint8_t * VS_RESTRICT dstp = vsapi->getWritePtr(dst, plane);
+
+                if (d->vi->format->sampleType == stInteger) {
+                    if (d->vi->format->bytesPerSample == 1) {
+                        binarize_i8(srcp, dstp, width, height, stride, (uint8_t)d->thresholdi[plane], (uint8_t)d->v0i[plane], (uint8_t)d->v1i[plane]);
+
+                    } else if (d->vi->format->bytesPerSample == 2) {
+                        binarize_i16((const uint16_t *)srcp, (uint16_t *)dstp, width, height, stride, d->thresholdi[plane], d->v0i[plane], d->v1i[plane]);
+                    }
+                } else if (d->vi->format->sampleType == stFloat) {
+                    if (d->vi->format->bytesPerSample == 4) {
+                        binarize_f32((const float *)srcp, (float *)dstp, width, height, stride, d->thresholdf[plane], d->v0f[plane], d->v1f[plane]);
+                    }
+                }
+            }
+        }
+
+        vsapi->freeFrame(src);
+        return dst;
+    }
+
+    return 0;
+}
+
+static void VS_CC binarizeFree(void *instanceData, VSCore *core, const VSAPI *vsapi) {
+    BinarizeData *d = (BinarizeData *)instanceData;
+    vsapi->freeNode(d->node);
+    free(d);
+}
+
+void VS_CC binarizeCreate(const VSMap *in, VSMap *out, void *userData, VSCore *core, const VSAPI *vsapi) {
+    BinarizeData d;
+    BinarizeData *data;
+
+    d.node = vsapi->propGetNode(in, "clip", 0, 0);
+    d.vi = vsapi->getVideoInfo(d.node);
+
+    int num_planes = d.vi->format->numPlanes;
+
+    bool prevValid;
+
+    if (vsapi->propNumElements(in, "threshold") > num_planes) {
+        vsapi->freeNode(d.node);
+        vsapi->setError(out, "ispc.Binarize: \"threshold\" has more values specified than there are planes");
+        return;
+    }
+
+    prevValid = false;
+    for (int i = 0; i < num_planes; i++) {
+        int err;
+
+        if (d.vi->format->sampleType == stInteger) {
+            uint16_t temp = (uint16_t)(vsapi->propGetFloat(in, "threshold", i, &err) + .5);
+            if (err) {
+                temp = (i == 0) ? (1 << (d.vi->format->bitsPerSample - 1)) : d.thresholdi[i-1];
+            } else {
+                prevValid = true;
+            }
+
+            d.thresholdi[i] = temp;
+
+        } else if (d.vi->format->sampleType == stFloat) {
+            float temp = (float)vsapi->propGetFloat(in, "threshold", i, &err);
+            if (err) {
+                temp = prevValid ? d.thresholdf[i-1] : (((i > 0) && ((d.vi->format->colorFamily == cmYUV) || (d.vi->format->colorFamily == cmYCoCg))) ? 0.f : 0.5f);
+            } else {
+                prevValid = true;
+            }
+
+            d.thresholdf[i] = temp;
+        }
+    }
+
+    if (vsapi->propNumElements(in, "v0") > num_planes) {
+        vsapi->freeNode(d.node);
+        vsapi->setError(out, "ispc.Binarize: \"v0\" has more values specified than there are planes");
+        return;
+    }
+
+    prevValid = false;
+    for (int i = 0; i < num_planes; i++) {
+        int err;
+
+        if (d.vi->format->sampleType == stInteger) {
+            uint16_t temp = (uint16_t)(vsapi->propGetFloat(in, "v0", i, &err) + .5);
+            if (err) {
+                temp = (i == 0) ? 0U : d.v0i[i-1];
+            } else {
+                prevValid = true;
+            }
+
+            d.v0i[i] = temp;
+
+        } else if (d.vi->format->sampleType == stFloat) {
+            float temp = (float)vsapi->propGetFloat(in, "v0", i, &err);
+            if (err) {
+                temp = prevValid ? d.v0f[i-1] : (((i > 0) && ((d.vi->format->colorFamily == cmYUV) || (d.vi->format->colorFamily == cmYCoCg))) ? -0.5f : 0.f);
+            } else {
+                prevValid = true;
+            }
+
+            d.v0f[i] = temp;
+        }
+    }
+
+    if (vsapi->propNumElements(in, "v1") > num_planes) {
+        vsapi->freeNode(d.node);
+        vsapi->setError(out, "ispc.Binarize: \"v1\" has more values specified than there are planes");
+        return;
+    }
+
+    prevValid = false;
+    for (int i = 0; i < num_planes; i++) {
+        int err;
+
+        if (d.vi->format->sampleType == stInteger) {
+            uint16_t temp = (uint16_t)(vsapi->propGetFloat(in, "v1", i, &err) + .5);
+            if (err) {
+                temp = (i == 0) ? ((1 << d.vi->format->bitsPerSample) - 1) : d.v1i[i-1];
+            } else {
+                prevValid = true;
+            }
+
+            d.v1i[i] = temp;
+
+        } else if (d.vi->format->sampleType == stFloat) {
+            float temp = (float)vsapi->propGetFloat(in, "v1", i, &err);
+            if (err) {
+                temp = prevValid ? d.v1f[i-1] : (((i > 0) && ((d.vi->format->colorFamily == cmYUV) || (d.vi->format->colorFamily == cmYCoCg))) ? 0.5f : 1.f);
+            } else {
+                prevValid = true;
+            }
+
+            d.v1f[i] = temp;
+        }
+    }
+
+    const int m = vsapi->propNumElements(in, "planes");
+
+    for (int i = 0; i < 3; i++)
+        d.process[i] = (m <= 0);
+
+    for (int i = 0; i < vsapi->propNumElements(in, "planes"); i++) {
+        int plane = int64ToIntS(vsapi->propGetInt(in, "planes", i, 0));
+
+        if (plane < 0 || plane >= num_planes) {
+            vsapi->freeNode(d.node);
+            vsapi->setError(out, "ispc.Binarize: plane index out of range");
+            return;
+        }
+
+        if (d.process[plane]) {
+            vsapi->freeNode(d.node);
+            vsapi->setError(out, "ispc.Binarize: plane specified twice");
+            return;
+        }
+
+        d.process[plane] = true;
+    }
+
+    data = malloc(sizeof(d));
+    *data = d;
+
+    vsapi->createFilter(in, out, "Binarize", binarizeInit, binarizeGetFrame, binarizeFree, fmParallel, 0, data, core);
 }
