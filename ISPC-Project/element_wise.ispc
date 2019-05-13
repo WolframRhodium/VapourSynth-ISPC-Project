@@ -138,3 +138,28 @@ export void make_diff_f32(const uniform float srcp1[], const uniform float srcp2
         (dstp + i * stride)[j] = (srcp1 + i * stride)[j] - (srcp2 + i * stride)[j];
     }
 }
+
+// MergeDiff
+export void merge_diff_i8(const uniform unsigned int8 srcp1[], const uniform unsigned int8 srcp2[], 
+                     uniform unsigned int8 dstp[], uniform int width, uniform int height, 
+                     uniform int stride) {
+    foreach (i = 0 ... height, j = 0 ... width) {
+        (dstp + i * stride)[j] = clamp((int32)((srcp1 + i * stride)[j]) + (int32)((srcp2 + i * stride)[j]) - 128, 0, 255);
+    }
+}
+
+export void merge_diff_i16(const uniform unsigned int16 srcp1[], const uniform unsigned int16 srcp2[],
+                      uniform unsigned int16 dstp[], uniform int width, uniform int height, 
+                      uniform int stride, uniform int32 halfpoint, uniform int32 maxvalue) {
+    foreach (i = 0 ... height, j = 0 ... width) {
+        (dstp + i * stride)[j] = clamp((int32)((srcp1 + i * stride)[j]) + (int32)((srcp2 + i * stride)[j]) - halfpoint, 0, maxvalue);
+    }
+}
+
+export void merge_diff_f32(const uniform float srcp1[], const uniform float srcp2[], 
+                         uniform float dstp[], uniform int width, uniform int height, 
+                         uniform int stride) {
+    foreach (i = 0 ... height, j = 0 ... width) {
+        (dstp + i * stride)[j] = (srcp1 + i * stride)[j] + (srcp2 + i * stride)[j];
+    }
+}

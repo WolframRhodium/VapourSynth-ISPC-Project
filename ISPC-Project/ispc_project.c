@@ -8,6 +8,7 @@ VS_EXTERNAL_API(void) VapourSynthPluginInit(VSConfigPlugin configFunc, VSRegiste
     registerFunc("Binarize", "clip:clip;threshold:float[]:opt;v0:float[]:opt;v1:float[]:opt;planes:int[]:opt;", binarizeCreate, 0, plugin);
     registerFunc("Invert", "clip:clip;planes:int[]:opt;", invertCreate, 0, plugin);
     registerFunc("MakeDiff", "clipa:clip;clipb:clip;planes:int[]:opt;", makeDiffCreate, 0, plugin);
+    registerFunc("MergeDiff", "clipa:clip;clipb:clip;planes:int[]:opt;", mergeDiffCreate, 0, plugin);
     registerFunc("Merge", "clipa:clip;clipb:clip;weight:float[]:opt;", mergeCreate, 0, plugin);
     registerFunc("Limiter", "clip:clip;min:float[]:opt;max:float[]:opt;planes:int[]:opt;", limiterCreate, 0, plugin);
 }

@@ -56,4 +56,13 @@ typedef struct {
 
 extern void VS_CC makeDiffCreate(const VSMap *in, VSMap *out, void *userData, VSCore *core, const VSAPI *vsapi);
 
+typedef struct {
+    VSNodeRef *node1;
+    VSNodeRef *node2;
+    const VSVideoInfo *vi;
+    bool process[3];
+} MergeDiffData;
+
+extern void VS_CC mergeDiffCreate(const VSMap *in, VSMap *out, void *userData, VSCore *core, const VSAPI *vsapi);
+
 #endif // ISPC_ELEMENT_WISE_H
