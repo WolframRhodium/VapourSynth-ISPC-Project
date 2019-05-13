@@ -2,14 +2,18 @@
 export void invert_i8(const uniform unsigned int8 srcp[], uniform unsigned int8 dstp[], 
                       uniform int width, uniform int height, uniform int stride) {
     foreach (i = 0 ... height, j = 0 ... width) {
-        (dstp + i * stride)[j] = ~(srcp + i * stride)[j];
+        const unsigned int8 src = (srcp + i * stride)[j];
+
+        (dstp + i * stride)[j] = ~src;
     }
 }
 
 export void invert_i16(const uniform unsigned int16 srcp[], uniform unsigned int16 dstp[], 
                        uniform int width, uniform int height, uniform int stride) {
     foreach (i = 0 ... height, j = 0 ... width) {
-        (dstp + i * stride)[j] = ~(srcp + i * stride)[j];
+        const unsigned int16 src = (srcp + i * stride)[j];
+
+        (dstp + i * stride)[j] = ~src;
     }
 }
 
@@ -17,7 +21,9 @@ export void invert_i16m(const uniform unsigned int16 srcp[], uniform unsigned in
                         uniform int width, uniform int height, uniform int stride, 
                         uniform unsigned int16 peak) {
     foreach (i = 0 ... height, j = 0 ... width) {
-        (dstp + i * stride)[j] = peak - (srcp + i * stride)[j];
+        const unsigned int16 src = (srcp + i * stride)[j];
+
+        (dstp + i * stride)[j] = peak - src;
     }
 }
 
@@ -26,11 +32,15 @@ export void invert_f32(const uniform float srcp[], uniform float dstp[],
                        uniform int stride, uniform bool uv) {
     if (uv) {
         foreach (i = 0 ... height, j = 0 ... width) {
-            (dstp + i * stride)[j] = -(srcp + i * stride)[j];
+            const float src = (srcp + i * stride)[j];
+
+            (dstp + i * stride)[j] = -src;
         }
     } else {
         foreach (i = 0 ... height, j = 0 ... width) {
-            (dstp + i * stride)[j] = 1.f - (srcp + i * stride)[j];
+            const float src = (srcp + i * stride)[j];
+
+            (dstp + i * stride)[j] = 1.f - src;
         }
     }
 }
@@ -40,7 +50,9 @@ export void limiter_i8(const uniform unsigned int8 srcp[], uniform unsigned int8
                        uniform int width, uniform int height, uniform int stride, 
                        uniform unsigned int8 low, uniform unsigned int8 high) {
     foreach (i = 0 ... height, j = 0 ... width) {
-        (dstp + i * stride)[j] = clamp((srcp + i * stride)[j], low, high);
+        const unsigned int8 src = (srcp + i * stride)[j];
+
+        (dstp + i * stride)[j] = clamp(src, low, high);
     }
 }
 
@@ -48,7 +60,9 @@ export void limiter_i16(const uniform unsigned int16 srcp[], uniform unsigned in
                         uniform int width, uniform int height, uniform int stride, 
                         uniform unsigned int16 low, uniform unsigned int16 high) {
     foreach (i = 0 ... height, j = 0 ... width) {
-        (dstp + i * stride)[j] = clamp((srcp + i * stride)[j], low, high);
+        const unsigned int16 src = (srcp + i * stride)[j];
+
+        (dstp + i * stride)[j] = clamp(src, low, high);
     }
 }
 
@@ -57,7 +71,9 @@ export void limiter_f32(const uniform float srcp[], uniform float dstp[],
                         uniform int stride, uniform float low, 
                         uniform float high) {
     foreach (i = 0 ... height, j = 0 ... width) {
-        (dstp + i * stride)[j] = clamp((srcp + i * stride)[j], low, high);
+        const float src = (srcp + i * stride)[j];
+
+        (dstp + i * stride)[j] = clamp(src, low, high);
     }
 }
 
@@ -67,7 +83,9 @@ export void binarize_i8(const uniform unsigned int8 srcp[], uniform unsigned int
                         uniform unsigned int8 threshold, uniform unsigned int8 v0, 
                         uniform unsigned int8 v1) {
     foreach (i = 0 ... height, j = 0 ... width) {
-        (dstp + i * stride)[j] = ((srcp + i * stride)[j] < threshold) ? v0 : v1;
+        const unsigned int8 src = (srcp + i * stride)[j];
+
+        (dstp + i * stride)[j] = (src < threshold) ? v0 : v1;
     }
 }
 
@@ -76,7 +94,9 @@ export void binarize_i16(const uniform unsigned int16 srcp[], uniform unsigned i
                          uniform unsigned int16 threshold, uniform unsigned int16 v0, 
                          uniform unsigned int16 v1) {
     foreach (i = 0 ... height, j = 0 ... width) {
-        (dstp + i * stride)[j] = ((srcp + i * stride)[j] < threshold) ? v0 : v1;
+        const unsigned int16 src = (srcp + i * stride)[j];
+
+        (dstp + i * stride)[j] = (src < threshold) ? v0 : v1;
     }
 }
 
@@ -85,16 +105,21 @@ export void binarize_f32(const uniform float srcp[], uniform float dstp[],
                          uniform int stride, uniform float threshold, 
                          uniform float v0, uniform float v1) {
     foreach (i = 0 ... height, j = 0 ... width) {
-        (dstp + i * stride)[j] = ((srcp + i * stride)[j] < threshold) ? v0 : v1;
+        const float src = (srcp + i * stride)[j];
+
+        (dstp + i * stride)[j] = (src < threshold) ? v0 : v1;
     }
 }
 
 // Merge
 export void merge_i8(const uniform unsigned int8 srcp1[], const uniform unsigned int8 srcp2[], 
                      uniform unsigned int8 dstp[], uniform int width, uniform int height, 
-                     uniform int stride, uniform unsigned int32 weight) {
+                     uniform int stride, uniform int32 weight) {
     foreach (i = 0 ... height, j = 0 ... width) {
-        (dstp + i * stride)[j] = (unsigned int8)((srcp1 + i * stride)[j] + ((((srcp2 + i * stride)[j] - (srcp1 + i * stride)[j]) * weight + (1U << 14U)) >> 15U));
+        const int32 src1 = (srcp1 + i * stride)[j];
+        const int32 src2 = (srcp2 + i * stride)[j];
+
+        (dstp + i * stride)[j] = src1 + (((src2 - src1) * weight + (1 << 14)) >> 15);
     }
 }
 
@@ -102,7 +127,10 @@ export void merge_i16(const uniform unsigned int16 srcp1[], const uniform unsign
                       uniform unsigned int16 dstp[], uniform int width, uniform int height, 
                       uniform int stride, uniform int32 weight) {
     foreach (i = 0 ... height, j = 0 ... width) {
-        (dstp + i * stride)[j] = (unsigned int16)((srcp1 + i * stride)[j] + ((((srcp2 + i * stride)[j] - (srcp1 + i * stride)[j]) * weight + (1U << 14U)) >> 15U));
+        const int32 src1 = (srcp1 + i * stride)[j];
+        const int32 src2 = (srcp2 + i * stride)[j];
+
+        (dstp + i * stride)[j] = src1 + (((src2 - src1) * weight + (1 << 14)) >> 15);
     }
 }
 
@@ -110,7 +138,10 @@ export void merge_f32(const uniform float srcp1[], const uniform float srcp2[],
                          uniform float dstp[], uniform int width, uniform int height, 
                          uniform int stride, uniform float weight) {
     foreach (i = 0 ... height, j = 0 ... width) {
-        (dstp + i * stride)[j] = (srcp1 + i * stride)[j] + (((srcp2 + i * stride)[j] - (srcp1 + i * stride)[j]) * weight);
+        const float src1 = (srcp1 + i * stride)[j];
+        const float src2 = (srcp2 + i * stride)[j];
+
+        (dstp + i * stride)[j] = src1 + ((src2 - src1) * weight);
     }
 }
 
@@ -119,7 +150,10 @@ export void make_diff_i8(const uniform unsigned int8 srcp1[], const uniform unsi
                      uniform unsigned int8 dstp[], uniform int width, uniform int height, 
                      uniform int stride) {
     foreach (i = 0 ... height, j = 0 ... width) {
-        (dstp + i * stride)[j] = clamp((int32)((srcp1 + i * stride)[j]) - (int32)((srcp2 + i * stride)[j]) + 128, 0, 255);
+        const int32 src1 = (srcp1 + i * stride)[j];
+        const int32 src2 = (srcp2 + i * stride)[j];
+
+        (dstp + i * stride)[j] = clamp((src1 - src2) + 128, 0, 255);
     }
 }
 
@@ -127,7 +161,10 @@ export void make_diff_i16(const uniform unsigned int16 srcp1[], const uniform un
                       uniform unsigned int16 dstp[], uniform int width, uniform int height, 
                       uniform int stride, uniform int32 halfpoint, uniform int32 maxvalue) {
     foreach (i = 0 ... height, j = 0 ... width) {
-        (dstp + i * stride)[j] = clamp((int32)((srcp1 + i * stride)[j]) - (int32)((srcp2 + i * stride)[j]) + halfpoint, 0, maxvalue);
+        const int32 src1 = (srcp1 + i * stride)[j];
+        const int32 src2 = (srcp2 + i * stride)[j];
+
+        (dstp + i * stride)[j] = clamp(src1 - src2 + halfpoint, 0, maxvalue);
     }
 }
 
@@ -135,7 +172,10 @@ export void make_diff_f32(const uniform float srcp1[], const uniform float srcp2
                          uniform float dstp[], uniform int width, uniform int height, 
                          uniform int stride) {
     foreach (i = 0 ... height, j = 0 ... width) {
-        (dstp + i * stride)[j] = (srcp1 + i * stride)[j] - (srcp2 + i * stride)[j];
+        const float src1 = (srcp1 + i * stride)[j];
+        const float src2 = (srcp2 + i * stride)[j];
+
+        (dstp + i * stride)[j] = src1 - src2;
     }
 }
 
@@ -144,7 +184,10 @@ export void merge_diff_i8(const uniform unsigned int8 srcp1[], const uniform uns
                      uniform unsigned int8 dstp[], uniform int width, uniform int height, 
                      uniform int stride) {
     foreach (i = 0 ... height, j = 0 ... width) {
-        (dstp + i * stride)[j] = clamp((int32)((srcp1 + i * stride)[j]) + (int32)((srcp2 + i * stride)[j]) - 128, 0, 255);
+        const int32 src1 = (srcp1 + i * stride)[j];
+        const int32 src2 = (srcp2 + i * stride)[j];
+
+        (dstp + i * stride)[j] = clamp(src1 + src2 - 128, 0, 255);
     }
 }
 
@@ -152,7 +195,10 @@ export void merge_diff_i16(const uniform unsigned int16 srcp1[], const uniform u
                       uniform unsigned int16 dstp[], uniform int width, uniform int height, 
                       uniform int stride, uniform int32 halfpoint, uniform int32 maxvalue) {
     foreach (i = 0 ... height, j = 0 ... width) {
-        (dstp + i * stride)[j] = clamp((int32)((srcp1 + i * stride)[j]) + (int32)((srcp2 + i * stride)[j]) - halfpoint, 0, maxvalue);
+        const int32 src1 = (srcp1 + i * stride)[j];
+        const int32 src2 = (srcp2 + i * stride)[j];
+
+        (dstp + i * stride)[j] = clamp(src1 + src2 - halfpoint, 0, maxvalue);
     }
 }
 
@@ -160,6 +206,9 @@ export void merge_diff_f32(const uniform float srcp1[], const uniform float srcp
                          uniform float dstp[], uniform int width, uniform int height, 
                          uniform int stride) {
     foreach (i = 0 ... height, j = 0 ... width) {
-        (dstp + i * stride)[j] = (srcp1 + i * stride)[j] + (srcp2 + i * stride)[j];
+        const float src1 = (srcp1 + i * stride)[j];
+        const float src2 = (srcp2 + i * stride)[j];
+
+        (dstp + i * stride)[j] = src1 + src2;
     }
 }

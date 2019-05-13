@@ -41,7 +41,7 @@ typedef struct {
     VSNodeRef *node2;
     const VSVideoInfo *vi;
     enum MergeBehavior {kMerge=0, kCopyFirst=1, kCopySecond=2} process[3];
-    uint32_t weighti[3];
+    int32_t weighti[3];
     float weightf[3];
 } MergeData;
 
