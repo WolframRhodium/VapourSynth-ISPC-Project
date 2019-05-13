@@ -2,6 +2,7 @@
 #define ISPC_ELEMENT_WISE_H
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 
 #include "VapourSynth.h"
@@ -45,5 +46,14 @@ typedef struct {
 } MergeData;
 
 extern void VS_CC mergeCreate(const VSMap *in, VSMap *out, void *userData, VSCore *core, const VSAPI *vsapi);
+
+typedef struct {
+    VSNodeRef *node1;
+    VSNodeRef *node2;
+    const VSVideoInfo *vi;
+    bool process[3];
+} MakeDiffData;
+
+extern void VS_CC makeDiffCreate(const VSMap *in, VSMap *out, void *userData, VSCore *core, const VSAPI *vsapi);
 
 #endif // ISPC_ELEMENT_WISE_H

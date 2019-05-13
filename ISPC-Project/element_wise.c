@@ -18,7 +18,7 @@ static const VSFrameRef *VS_CC invertGetFrame(int n, int activationReason, void 
         const VSFrameRef *src = vsapi->getFrameFilter(n, d->node, frameCtx);
 
         const int pl[] = { 0, 1, 2 };
-        const VSFrameRef *fr[] = {d->process[0] ? 0 : src, d->process[1] ? 0 : src, d->process[2] ? 0 : src};
+        const VSFrameRef *fr[] = {d->process[0] ? NULL : src, d->process[1] ? NULL : src, d->process[2] ? NULL : src};
         VSFrameRef *dst = vsapi->newVideoFrame2(d->vi->format, d->vi->width, d->vi->height, fr, pl, src, core);
 
         for (int plane = 0; plane < d->vi->format->numPlanes; plane++) {
@@ -67,9 +67,8 @@ static void VS_CC invertFree(void *instanceData, VSCore *core, const VSAPI *vsap
 
 void VS_CC invertCreate(const VSMap *in, VSMap *out, void *userData, VSCore *core, const VSAPI *vsapi) {
     InvertData d;
-    InvertData *data;
 
-    d.node = vsapi->propGetNode(in, "clip", 0, 0);
+    d.node = vsapi->propGetNode(in, "clip", 0, NULL);
     d.vi = vsapi->getVideoInfo(d.node);
 
     int num_planes = d.vi->format->numPlanes;
@@ -96,7 +95,7 @@ void VS_CC invertCreate(const VSMap *in, VSMap *out, void *userData, VSCore *cor
         d.process[plane] = true;
     }
 
-    data = malloc(sizeof(d));
+    InvertData * const data = malloc(sizeof(d));
     *data = d;
 
     vsapi->createFilter(in, out, "Invert", invertInit, invertGetFrame, invertFree, fmParallel, 0, data, core);
@@ -117,7 +116,7 @@ static const VSFrameRef *VS_CC limiterGetFrame(int n, int activationReason, void
         const VSFrameRef *src = vsapi->getFrameFilter(n, d->node, frameCtx);
 
         const int pl[] = { 0, 1, 2 };
-        const VSFrameRef *fr[] = {d->process[0] ? 0 : src, d->process[1] ? 0 : src, d->process[2] ? 0 : src};
+        const VSFrameRef *fr[] = {d->process[0] ? NULL : src, d->process[1] ? NULL : src, d->process[2] ? NULL : src};
         VSFrameRef *dst = vsapi->newVideoFrame2(d->vi->format, d->vi->width, d->vi->height, fr, pl, src, core);
 
         for (int plane = 0; plane < d->vi->format->numPlanes; plane++) {
@@ -158,9 +157,8 @@ static void VS_CC limiterFree(void *instanceData, VSCore *core, const VSAPI *vsa
 
 void VS_CC limiterCreate(const VSMap *in, VSMap *out, void *userData, VSCore *core, const VSAPI *vsapi) {
     LimiterData d;
-    LimiterData *data;
 
-    d.node = vsapi->propGetNode(in, "clip", 0, 0);
+    d.node = vsapi->propGetNode(in, "clip", 0, NULL);
     d.vi = vsapi->getVideoInfo(d.node);
 
     int num_planes = d.vi->format->numPlanes;
@@ -249,7 +247,7 @@ void VS_CC limiterCreate(const VSMap *in, VSMap *out, void *userData, VSCore *co
         d.process[i] = (m <= 0);
 
     for (int i = 0; i < vsapi->propNumElements(in, "planes"); i++) {
-        int plane = int64ToIntS(vsapi->propGetInt(in, "planes", i, 0));
+        int plane = int64ToIntS(vsapi->propGetInt(in, "planes", i, NULL));
 
         if (plane < 0 || plane >= num_planes) {
             vsapi->freeNode(d.node);
@@ -266,7 +264,7 @@ void VS_CC limiterCreate(const VSMap *in, VSMap *out, void *userData, VSCore *co
         d.process[plane] = true;
     }
 
-    data = malloc(sizeof(d));
+    LimiterData * const data = malloc(sizeof(d));
     *data = d;
 
     vsapi->createFilter(in, out, "Limiter", limiterInit, limiterGetFrame, limiterFree, fmParallel, 0, data, core);
@@ -287,7 +285,7 @@ static const VSFrameRef *VS_CC binarizeGetFrame(int n, int activationReason, voi
         const VSFrameRef *src = vsapi->getFrameFilter(n, d->node, frameCtx);
 
         const int pl[] = { 0, 1, 2 };
-        const VSFrameRef *fr[] = {d->process[0] ? 0 : src, d->process[1] ? 0 : src, d->process[2] ? 0 : src};
+        const VSFrameRef *fr[] = {d->process[0] ? NULL : src, d->process[1] ? NULL : src, d->process[2] ? NULL : src};
         VSFrameRef *dst = vsapi->newVideoFrame2(d->vi->format, d->vi->width, d->vi->height, fr, pl, src, core);
 
         for (int plane = 0; plane < d->vi->format->numPlanes; plane++) {
@@ -328,9 +326,8 @@ static void VS_CC binarizeFree(void *instanceData, VSCore *core, const VSAPI *vs
 
 void VS_CC binarizeCreate(const VSMap *in, VSMap *out, void *userData, VSCore *core, const VSAPI *vsapi) {
     BinarizeData d;
-    BinarizeData *data;
 
-    d.node = vsapi->propGetNode(in, "clip", 0, 0);
+    d.node = vsapi->propGetNode(in, "clip", 0, NULL);
     d.vi = vsapi->getVideoInfo(d.node);
 
     int num_planes = d.vi->format->numPlanes;
@@ -439,7 +436,7 @@ void VS_CC binarizeCreate(const VSMap *in, VSMap *out, void *userData, VSCore *c
         d.process[i] = (m <= 0);
 
     for (int i = 0; i < vsapi->propNumElements(in, "planes"); i++) {
-        int plane = int64ToIntS(vsapi->propGetInt(in, "planes", i, 0));
+        int plane = int64ToIntS(vsapi->propGetInt(in, "planes", i, NULL));
 
         if (plane < 0 || plane >= num_planes) {
             vsapi->freeNode(d.node);
@@ -456,7 +453,7 @@ void VS_CC binarizeCreate(const VSMap *in, VSMap *out, void *userData, VSCore *c
         d.process[plane] = true;
     }
 
-    data = malloc(sizeof(d));
+    BinarizeData * const data = malloc(sizeof(d));
     *data = d;
 
     vsapi->createFilter(in, out, "Binarize", binarizeInit, binarizeGetFrame, binarizeFree, fmParallel, 0, data, core);
@@ -479,7 +476,7 @@ static const VSFrameRef *VS_CC mergeGetFrame(int n, int activationReason, void *
         const VSFrameRef *src2 = vsapi->getFrameFilter(n, d->node2, frameCtx);
 
         const int pl[] = { 0, 1, 2 };
-        const VSFrameRef *fs[] = { 0, src1, src2 }; // kMerge, kCopyFirst, kCopySecond
+        const VSFrameRef *fs[] = { NULL, src1, src2 }; // kMerge, kCopyFirst, kCopySecond
         const VSFrameRef *fr[] = {fs[d->process[0]], fs[d->process[1]], fs[d->process[2]]};
         VSFrameRef *dst = vsapi->newVideoFrame2(d->vi->format, d->vi->width, d->vi->height, fr, pl, src1, core);
 
@@ -524,11 +521,32 @@ static void VS_CC mergeFree(void *instanceData, VSCore *core, const VSAPI *vsapi
 
 void VS_CC mergeCreate(const VSMap *in, VSMap *out, void *userData, VSCore *core, const VSAPI *vsapi) {
     MergeData d;
-    MergeData *data;
 
-    d.node1 = vsapi->propGetNode(in, "clipa", 0, 0);
-    d.node2 = vsapi->propGetNode(in, "clipb", 0, 0);
+    d.node1 = vsapi->propGetNode(in, "clipa", 0, NULL);
+    d.node2 = vsapi->propGetNode(in, "clipb", 0, NULL);
     d.vi = vsapi->getVideoInfo(d.node1);
+
+    if (!isConstantFormat(d.vi) || !isSameFormat(d.vi, vsapi->getVideoInfo(d.node2))) {
+        vsapi->freeNode(d.node1);
+        vsapi->freeNode(d.node2);
+        vsapi->setError(out, "ispc.Merge: both clips must have constant format and dimensions, and the same format and dimensions");
+        return;
+    }
+
+    if ((d.vi->format->colorFamily == cmCompat) || (vsapi->getVideoInfo(d.node2)->format->colorFamily == cmCompat)) {
+        vsapi->freeNode(d.node1);
+        vsapi->freeNode(d.node2);
+        vsapi->setError(out, "ispc.Merge: compat formats are not supported");
+        return;
+    }
+
+    if ((d.vi->format->sampleType == stInteger && d.vi->format->bytesPerSample != 1 && d.vi->format->bytesPerSample != 2)
+        || (d.vi->format->sampleType == stFloat && d.vi->format->bytesPerSample != 4)) {
+        vsapi->freeNode(d.node1);
+        vsapi->freeNode(d.node2);
+        vsapi->setError(out, "ispc.Merge: only 8-16 bit integer and 32 bit float input supported");
+        return;
+    }
 
     int num_planes = d.vi->format->numPlanes;
 
@@ -578,8 +596,131 @@ void VS_CC mergeCreate(const VSMap *in, VSMap *out, void *userData, VSCore *core
         }
     }
 
-    data = malloc(sizeof(d));
+    MergeData * const data = malloc(sizeof(d));
     *data = d;
 
     vsapi->createFilter(in, out, "Merge", mergeInit, mergeGetFrame, mergeFree, fmParallel, 0, data, core);
+}
+
+// MakeDiff
+static void VS_CC makeDiffInit(VSMap *in, VSMap *out, void **instanceData, VSNode *node, VSCore *core, const VSAPI *vsapi) {
+    MakeDiffData *d = (MakeDiffData *) * instanceData;
+    vsapi->setVideoInfo(d->vi, 1, node);
+}
+
+static const VSFrameRef *VS_CC makeDiffGetFrame(int n, int activationReason, void **instanceData, void **frameData, VSFrameContext *frameCtx, VSCore *core, const VSAPI *vsapi) {
+    MakeDiffData *d = (MakeDiffData *) * instanceData;
+
+    if (activationReason == arInitial) {
+        vsapi->requestFrameFilter(n, d->node1, frameCtx);
+        vsapi->requestFrameFilter(n, d->node2, frameCtx);
+    } else if (activationReason == arAllFramesReady) {
+        const VSFrameRef *src1 = vsapi->getFrameFilter(n, d->node1, frameCtx);
+        const VSFrameRef *src2 = vsapi->getFrameFilter(n, d->node2, frameCtx);
+
+        const int pl[] = { 0, 1, 2 };
+        const VSFrameRef *fr[] = { d->process[0] ? NULL : src1, d->process[1] ? NULL : src1, d->process[2] ? NULL : src1 };
+        VSFrameRef *dst = vsapi->newVideoFrame2(d->vi->format, d->vi->width, d->vi->height, fr, pl, src1, core);
+
+        for (int plane = 0; plane < d->vi->format->numPlanes; plane++) {
+            if (d->process[plane]) {
+                int stride = vsapi->getStride(src1, plane) / d->vi->format->bytesPerSample;
+                int height = vsapi->getFrameHeight(src1, plane);
+                int width = vsapi->getFrameWidth(src1, plane);
+                const uint8_t * VS_RESTRICT srcp1 = vsapi->getReadPtr(src1, plane);
+                const uint8_t * VS_RESTRICT srcp2 = vsapi->getReadPtr(src2, plane);
+                uint8_t * VS_RESTRICT dstp = vsapi->getWritePtr(dst, plane);
+
+                if (d->vi->format->sampleType == stInteger) {
+                    if (d->vi->format->bytesPerSample == 1) {
+                        make_diff_i8(srcp1, srcp2, dstp, width, height, stride);
+
+                    } else if (d->vi->format->bytesPerSample == 2) {
+                        const int halfpoint = 1 << (d->vi->format->bitsPerSample - 1);
+                        const int maxvalue = (1 << d->vi->format->bitsPerSample) - 1;
+
+                        make_diff_i16((const uint16_t *)srcp1, (const uint16_t *)srcp2, (uint16_t *)dstp, width, height, stride, halfpoint, maxvalue);
+                    }
+                } else if (d->vi->format->sampleType == stFloat) {
+                    if (d->vi->format->bytesPerSample == 4) {
+                        make_diff_f32((const float *)srcp1, (const float *)srcp2, (float *)dstp, width, height, stride);
+                    }
+                }
+            }
+        }
+
+        vsapi->freeFrame(src1);
+        vsapi->freeFrame(src2);
+        return dst;
+    }
+
+    return 0;
+}
+
+static void VS_CC makeDiffFree(void *instanceData, VSCore *core, const VSAPI *vsapi) {
+    MakeDiffData *d = (MakeDiffData *)instanceData;
+    vsapi->freeNode(d->node1);
+    vsapi->freeNode(d->node2);
+    free(d);
+}
+
+void VS_CC makeDiffCreate(const VSMap *in, VSMap *out, void *userData, VSCore *core, const VSAPI *vsapi) {
+    MakeDiffData d;
+
+    d.node1 = vsapi->propGetNode(in, "clipa", 0, NULL);
+    d.node2 = vsapi->propGetNode(in, "clipb", 0, NULL);
+    d.vi = vsapi->getVideoInfo(d.node1);
+
+    if (!isConstantFormat(d.vi) || !isSameFormat(d.vi, vsapi->getVideoInfo(d.node2))) {
+        vsapi->freeNode(d.node1);
+        vsapi->freeNode(d.node2);
+        vsapi->setError(out, "ispc.MakeDiff: both clips must have constant format and dimensions, and the same format and dimensions");
+        return;
+    }
+
+    if ((d.vi->format->colorFamily == cmCompat) || (vsapi->getVideoInfo(d.node2)->format->colorFamily == cmCompat)) {
+        vsapi->freeNode(d.node1);
+        vsapi->freeNode(d.node2);
+        vsapi->setError(out, "ispc.MakeDiff: compat formats are not supported");
+        return;
+    }
+
+    if ((d.vi->format->sampleType == stInteger && d.vi->format->bytesPerSample != 1 && d.vi->format->bytesPerSample != 2)
+        || (d.vi->format->sampleType == stFloat && d.vi->format->bytesPerSample != 4)) {
+        vsapi->freeNode(d.node1);
+        vsapi->freeNode(d.node2);
+        vsapi->setError(out, "ispc.MakeDiff: only 8-16 bit integer and 32 bit float input supported");
+        return;
+    }
+
+    int num_planes = d.vi->format->numPlanes;
+    const int m = vsapi->propNumElements(in, "planes");
+
+    for (int i = 0; i < 3; i++)
+        d.process[i] = (m <= 0);
+
+    for (int i = 0; i < vsapi->propNumElements(in, "planes"); i++) {
+        int plane = int64ToIntS(vsapi->propGetInt(in, "planes", i, 0));
+
+        if (plane < 0 || plane >= num_planes) {
+            vsapi->freeNode(d.node1);
+            vsapi->freeNode(d.node2);
+            vsapi->setError(out, "ispc.MakeDiff: plane index out of range");
+            return;
+        }
+
+        if (d.process[plane]) {
+            vsapi->freeNode(d.node1);
+            vsapi->freeNode(d.node2);
+            vsapi->setError(out, "ispc.MakeDiff: plane specified twice");
+            return;
+        }
+
+        d.process[plane] = true;
+    }
+
+    MakeDiffData * const data = malloc(sizeof(d));
+    *data = d;
+
+    vsapi->createFilter(in, out, "MakeDiff", makeDiffInit, makeDiffGetFrame, makeDiffFree, fmParallel, 0, data, core);
 }
